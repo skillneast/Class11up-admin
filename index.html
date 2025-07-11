@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All-in-One Admin Panel</title>
+    <title>Advanced Admin Panel v2</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
@@ -11,8 +11,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Poppins', sans-serif; background-color: var(--primary-bg); color: white; font-size: 14px; }
         .container { max-width: 900px; margin: 20px auto; padding: 20px; }
-        h2, h3, h4 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
-        h4 { border-bottom-style: dashed; font-size: 1em; margin-top: 20px;}
+        h2, h3, h4, h5 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
+        h4, h5 { border-bottom-style: dashed; font-size: 1em; margin-top: 20px;}
+        h5 { border-color: var(--card-bg); }
         .section { background-color: var(--secondary-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
         input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; font-family: 'Poppins', sans-serif; font-size: 1em; }
         input, select { background-color: var(--card-bg); color: white; }
@@ -104,15 +105,8 @@
                 const batchContainer = document.createElement('div');
                 batchContainer.className = 'section';
                 
-                // Render Batch Info and Delete Button
-                let batchHTML = `
-                    <div class="item">
-                        <span>${batch.title}</span>
-                        <button class="delete-btn" data-path="batches/${batchId}"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
+                let batchHTML = `<div class="item"><span>${batch.title}</span><button class="delete-btn" data-path="batches/${batchId}"><i class="fas fa-trash"></i></button></div>`;
                 
-                // Render Subjects within this Batch
                 batchHTML += '<div class="nested-section">';
                 batchHTML += `<h4>Subjects in ${batch.title}</h4>`;
                 const subjects = batch.subjects;
@@ -121,37 +115,50 @@
                         const subject = subjects[subjectId];
                         batchHTML += `<div class="item"><span>${subject.title}</span><button class="delete-btn" data-path="batches/${batchId}/subjects/${subjectId}"><i class="fas fa-trash"></i></button></div>`;
                         
-                        // Render Content within this Subject
+                        // NEW: Chapters Section within Subject
                         batchHTML += '<div class="nested-section" style="background-color: var(--primary-bg);">';
-                        batchHTML += `<h5>Content in ${subject.title}</h5>`;
-                        const content = subject.content;
-                        if(content){
-                             for(const contentId in content){
-                                 const item = content[contentId];
-                                 batchHTML += `<div class="item" style="font-size: 0.9em;"><span>[${item.type}] ${item.title}</span><button class="delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/content/${contentId}"><i class="fas fa-trash"></i></button></div>`;
-                             }
+                        batchHTML += `<h5>Chapters in ${subject.title}</h5>`;
+                        const chapters = subject.chapters;
+                        if(chapters){
+                            for(const chapterId in chapters){
+                                const chapter = chapters[chapterId];
+                                batchHTML += `<div class="item"><span>${chapter.title}</span><button class="delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}"><i class="fas fa-trash"></i></button></div>`;
+
+                                // Content Section within Chapter
+                                batchHTML += '<div class="nested-section" style="background-color: var(--secondary-bg);">';
+                                batchHTML += `<h6>Content in ${chapter.title}</h6>`;
+                                const content = chapter.content;
+                                if(content){
+                                    for(const contentId in content){
+                                        const item = content[contentId];
+                                        batchHTML += `<div class="item" style="font-size: 0.9em;"><span>[${item.type}] ${item.title}</span><button class="delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content/${contentId}"><i class="fas fa-trash"></i></button></div>`;
+                                    }
+                                }
+                                // Add Content Form
+                                batchHTML += `
+                                    <h6>Add Content to ${chapter.title}</h6>
+                                    <select class="content-type"><option value="lecture">Lecture</option><option value="note">Note</option><option value="dpp">DPP</option></select>
+                                    <input type="text" class="content-title" placeholder="Content Title">
+                                    <input type="text" class="content-url" placeholder="Content Link/URL">
+                                    <button class="add-content-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}" data-chapter-id="${chapterId}">Add Content</button>
+                                `;
+                                batchHTML += `</div>`; // End content nested-section
+                            }
                         }
-                        // Add Content Form
+
+                        // Add Chapter Form
                         batchHTML += `
-                            <h4>Add Content to ${subject.title}</h4>
-                            <select class="content-type" data-batch-id="${batchId}" data-subject-id="${subjectId}">
-                                <option value="lecture">Lecture</option><option value="note">Note</option><option value="dpp">DPP</option>
-                            </select>
-                            <input type="text" class="content-title" placeholder="Content Title">
-                            <input type="text" class="content-url" placeholder="Content Link/URL">
-                            <button class="add-content-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}">Add Content</button>
+                            <h5>Add Chapter to ${subject.title}</h5>
+                            <input type="text" class="chapter-title" placeholder="New Chapter Title">
+                            <button class="add-chapter-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}">Add Chapter</button>
                         `;
-                        batchHTML += `</div>`; // End content nested-section
+                        batchHTML += `</div>`; // End chapters nested-section
                     }
                 }
                 
-                // Add Subject Form
-                batchHTML += `
-                    <h4>Add Subject to ${batch.title}</h4>
-                    <input type="text" class="subject-title" placeholder="New Subject Title">
-                    <button class="add-subject-btn" data-batch-id="${batchId}">Add Subject</button>
-                `;
-                batchHTML += `</div>`; // End subjects nested-section
+                batchHTML += `<h4>Add Subject to ${batch.title}</h4>`;
+                batchHTML += `<input type="text" class="subject-title" placeholder="New Subject Title"><button class="add-subject-btn" data-batch-id="${batchId}">Add Subject</button>`;
+                batchHTML += `</div>`;
 
                 batchContainer.innerHTML = batchHTML;
                 batchesListDiv.appendChild(batchContainer);
@@ -159,40 +166,32 @@
         }
     });
 
-    // --- EVENT LISTENERS FOR DYNAMIC CONTENT ---
     batchesListDiv.addEventListener('click', e => {
-        // Handle Delete Button Clicks
-        if (e.target.closest('.delete-btn')) {
-            const path = e.target.closest('.delete-btn').dataset.path;
-            if (confirm('Are you sure you want to delete this? This action cannot be undone.')) {
-                remove(ref(database, path));
-            }
+        const target = e.target;
+        if (target.closest('.delete-btn')) {
+            const path = target.closest('.delete-btn').dataset.path;
+            if (confirm('Are you sure? This cannot be undone.')) remove(ref(database, path));
         }
-        
-        // Handle Add Subject Button Clicks
-        if (e.target.matches('.add-subject-btn')) {
-            const batchId = e.target.dataset.batchId;
-            const title = e.target.previousElementSibling.value;
-            if (title && batchId) {
-                push(ref(database, `batches/${batchId}/subjects`), { title, content: {} });
-            }
+        else if (target.matches('.add-subject-btn')) {
+            const batchId = target.dataset.batchId;
+            const title = target.previousElementSibling.value;
+            if (title && batchId) push(ref(database, `batches/${batchId}/subjects`), { title, chapters: {} });
         }
-
-        // Handle Add Content Button Clicks
-        if (e.target.matches('.add-content-btn')) {
-            const batchId = e.target.dataset.batchId;
-            const subjectId = e.target.dataset.subjectId;
-            const formDiv = e.target.parentElement;
+        else if (target.matches('.add-chapter-btn')) {
+            const { batchId, subjectId } = target.dataset;
+            const title = target.previousElementSibling.value;
+            if (title && batchId && subjectId) push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters`), { title, content: {} });
+        }
+        else if (target.matches('.add-content-btn')) {
+            const { batchId, subjectId, chapterId } = target.dataset;
+            const formDiv = target.parentElement;
             const type = formDiv.querySelector('.content-type').value;
             const title = formDiv.querySelector('.content-title').value;
             const url = formDiv.querySelector('.content-url').value;
-
             if (title && url && type) {
-                push(ref(database, `batches/${batchId}/subjects/${subjectId}/content`), { type, title, url });
+                push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content`), { type, title, url });
                 formDiv.querySelector('.content-title').value = '';
                 formDiv.querySelector('.content-url').value = '';
-            } else {
-                alert('Please fill all content fields.');
             }
         }
     });
