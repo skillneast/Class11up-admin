@@ -19,35 +19,27 @@
         input, select { background-color: var(--card-bg); color: white; }
         button { background-color: var(--button-color); color: white; font-weight: 600; cursor: pointer; }
         button:disabled { background-color: #555; cursor: not-allowed; }
-        
         .stats-section { display: flex; justify-content: space-around; text-align: center; }
-        .stat-item h4 { border-bottom: none; margin-bottom: 5px; }
-        .stat-item .count { font-size: 2em; font-weight: 600; }
-        .stat-item .realtime .count { color: var(--green-color); }
-
         .item { display: flex; align-items: center; background-color: var(--card-bg); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; }
         .item-title { font-weight: 500; flex-grow: 1; margin-left: 10px; }
         .item-actions { display: flex; gap: 10px; margin-left: auto; }
         .action-btn { background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 5px;}
         .action-btn.edit-btn { color: var(--edit-color); }
         .action-btn.delete-btn { color: var(--danger-color); }
-        .toggle-btn { cursor: pointer; transition: transform 0.3s; }
+        .toggle-btn { cursor: pointer; transition: transform 0.3s; width: 20px; text-align: center; }
         .toggle-btn.collapsed { transform: rotate(-90deg); }
-        .nested-section { border-left: 3px solid var(--button-color); padding-left: 15px; margin-top: 15px; }
+        .nested-section { border-left: 3px solid var(--button-color); padding-left: 15px; margin-top: 10px; }
         .collapsible-content.collapsed { display: none; }
-        .add-content-form { padding: 15px; background-color: var(--primary-bg); border-radius: 8px; margin-top: 10px;}
-        .batch-collapsible-content.collapsed { display: none; }
+        .add-form { padding: 15px; background-color: var(--primary-bg); border-radius: 8px; margin-top: 10px;}
     </style>
 </head>
 <body>
 <div class="container">
     <h2><i class="fas fa-cogs"></i> Website Admin Panel</h2>
-
     <div class="section stats-section">
-        <div class="stat-item realtime"><h4><i class="fas fa-signal"></i> Realtime Users</h4><div id="realtime-users" class="count">0</div></div>
+        <div class="stat-item"><h4><i class="fas fa-signal"></i> Realtime Users</h4><div id="realtime-users" class="count">0</div></div>
         <div class="stat-item"><h4><i class="fas fa-users"></i> Total Visits</h4><div id="total-visits" class="count">0</div></div>
     </div>
-
     <div class="section">
         <h3><i class="fas fa-globe"></i> General Settings</h3>
         <input type="text" id="logo-link" placeholder="Logo Link">
@@ -55,7 +47,6 @@
         <input type="text" id="contact-link" placeholder="Contact/Support Link">
         <button id="save-settings-btn">Save Settings</button>
     </div>
-
     <div class="section">
         <h3><i class="fas fa-layer-group"></i> Manage Batches</h3>
         <input type="text" id="batch-title" placeholder="New Batch Title">
@@ -81,208 +72,211 @@
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
 
-    const settingsRef = ref(database, 'settings');
-    document.getElementById('save-settings-btn').addEventListener('click', () => { set(settingsRef, { logoLink: document.getElementById('logo-link').value, telegramLink: document.getElementById('telegram-link').value, contactLink: document.getElementById('contact-link').value }); alert('Settings Saved!'); });
-    onValue(settingsRef, (snapshot) => { const data = snapshot.val(); if (data) { document.getElementById('logo-link').value = data.logoLink || ''; document.getElementById('telegram-link').value = data.telegramLink || ''; document.getElementById('contact-link').value = data.contactLink || ''; }});
-
-    onValue(ref(database, 'analytics/totalVisits'), s => { document.getElementById('total-visits').textContent = s.val() || 0; });
-    onValue(ref(database, 'presences'), s => { document.getElementById('realtime-users').textContent = s.numChildren(); });
-    
-    const batchesRef = ref(database, 'batches');
-    const batchesListDiv = document.getElementById('batches-list');
-    let sortedBatches = [];
     let openItemsState = new Set();
 
     function saveOpenState() {
         openItemsState.clear();
         document.querySelectorAll('.toggle-btn:not(.collapsed)').forEach(toggle => {
-            const item = toggle.closest('.item');
-            if (item && item.dataset.path) {
-                openItemsState.add(item.dataset.path);
-            }
+            const item = toggle.closest('[data-path]');
+            if (item) openItemsState.add(item.dataset.path);
         });
     }
 
-    document.getElementById('add-batch-btn').addEventListener('click', () => {
-        const titleInput = document.getElementById('batch-title');
-        const imageInput = document.getElementById('batch-image');
-        if (titleInput.value && imageInput.value) {
-            const newOrder = sortedBatches.length;
-            push(batchesRef, { title: titleInput.value, imageUrl: imageInput.value, order: newOrder });
-            titleInput.value = ''; imageInput.value = '';
-        }
-    });
-
-    onValue(batchesRef, (snapshot) => {
-        saveOpenState(); // Re-render se pehle state save karo
+    function renderUI(data) {
+        saveOpenState();
+        const batchesListDiv = document.getElementById('batches-list');
         batchesListDiv.innerHTML = '';
-        const batchesData = snapshot.val();
-        if (batchesData) {
-            sortedBatches = Object.entries(batchesData).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
-            sortedBatches.forEach(([batchId, batch], index) => {
-                const batchElement = createBatchElement(batchId, batch, index, sortedBatches.length);
-                batchesListDiv.appendChild(batchElement);
+        const sortedBatches = Object.entries(data.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
+        
+        sortedBatches.forEach(([batchId, batch], index) => {
+            const batchPath = `batches/${batchId}`;
+            const isBatchCollapsed = !openItemsState.has(batchPath);
+            const batchContainer = document.createElement('div');
+            batchContainer.className = 'section';
+            batchContainer.innerHTML = `
+                <div class="item" data-path="${batchPath}">
+                    <i class="fas fa-chevron-down toggle-btn ${isBatchCollapsed ? 'collapsed' : ''}"></i>
+                    <span class="item-title">${batch.title}</span>
+                    <div class="item-actions">
+                        <button class="action-btn reorder-btn" data-direction="up" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
+                        <button class="action-btn reorder-btn" data-direction="down" data-index="${index}" ${index === sortedBatches.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
+                        <button class="action-btn edit-btn" data-path="${batchPath}"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="action-btn delete-btn" data-path="${batchPath}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+            
+            const subjectsContainer = document.createElement('div');
+            subjectsContainer.className = `nested-section collapsible-content ${isBatchCollapsed ? 'collapsed' : ''}`;
+            
+            Object.entries(batch.subjects || {}).forEach(([subjectId, subject]) => {
+                subjectsContainer.appendChild(createSubjectElement(subjectId, subject, `${batchPath}/subjects/${subjectId}`));
             });
-        } else {
-            sortedBatches = [];
-            batchesListDiv.innerHTML = '<p>No batches found. Use the form above to add one.</p>';
-        }
-    });
-    
-    function createBatchElement(batchId, batch, index, total) {
-        const path = `batches/${batchId}`;
-        const isCollapsed = !openItemsState.has(path);
-        const container = document.createElement('div');
-        container.className = 'section';
 
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'item';
-        itemDiv.dataset.path = path; // Path ko state ke liye add karo
-        itemDiv.innerHTML = `
-            <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
-            <span class="item-title">${batch.title}</span>
-            <div class="item-actions">
-                <button class="action-btn reorder-up-btn" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
-                <button class="action-btn reorder-down-btn" data-index="${index}" ${index === total - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
-                <button class="action-btn edit-btn" data-path="batches/${batchId}" data-current-title="${batch.title}"><i class="fas fa-pencil-alt"></i></button>
-                <button class="action-btn delete-btn" data-path="batches/${batchId}"><i class="fas fa-trash"></i></button>
+            subjectsContainer.innerHTML += `<div class="add-form"><h6>Add Subject to ${batch.title}</h6><input type="text" placeholder="New Subject Title"><button class="add-btn" data-path="${batchPath}/subjects">Add Subject</button></div>`;
+            batchContainer.appendChild(subjectsContainer);
+            batchesListDiv.appendChild(batchContainer);
+        });
+    }
+
+    function createSubjectElement(subjectId, subject, subjectPath) {
+        const isCollapsed = !openItemsState.has(subjectPath);
+        const subjectContainer = document.createElement('div');
+        subjectContainer.innerHTML = `
+            <div class="item" data-path="${subjectPath}">
+                <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
+                <span class="item-title">${subject.title}</span>
+                <div class="item-actions">
+                    <button class="action-btn edit-btn" data-path="${subjectPath}"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn delete-btn" data-path="${subjectPath}"><i class="fas fa-trash"></i></button>
+                </div>
             </div>`;
-        container.appendChild(itemDiv);
 
-        const subjectsSection = document.createElement('div');
-        subjectsSection.className = `nested-section batch-collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
-        subjectsSection.innerHTML = `<h4>Subjects in ${batch.title}</h4>`;
-        if (batch.subjects) {
-            for (const subjectId in batch.subjects) {
-                subjectsSection.appendChild(createSubjectElement(batchId, subjectId, batch.subjects[subjectId]));
-            }
-        }
-        subjectsSection.innerHTML += `<h4>Add Subject</h4><input type="text" class="subject-title" placeholder="New Subject Title"><button class="add-subject-btn" data-batch-id="${batchId}">Add Subject</button>`;
-        container.appendChild(subjectsSection);
-        return container;
-    }
-
-    function createSubjectElement(batchId, subjectId, subject) {
-        const path = `batches/${batchId}/subjects/${subjectId}`;
-        const isCollapsed = !openItemsState.has(path);
-        const container = document.createElement('div');
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'item';
-        itemDiv.dataset.path = path;
-        itemDiv.innerHTML = `<i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i> <span class="item-title">${subject.title}</span><div class="item-actions"><button class="action-btn edit-btn" data-path="${path}" data-current-title="${subject.title}"><i class="fas fa-pencil-alt"></i></button><button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button></div>`;
-        container.appendChild(itemDiv);
-
-        const chaptersSection = document.createElement('div');
-        chaptersSection.className = `nested-section collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
-        chaptersSection.style.backgroundColor = 'var(--primary-bg)';
-        chaptersSection.innerHTML = `<h5>Chapters in ${subject.title}</h5>`;
-        if (subject.chapters) {
-            for (const chapterId in subject.chapters) {
-                chaptersSection.appendChild(createChapterElement(batchId, subjectId, chapterId, subject.chapters[chapterId]));
-            }
-        }
-        chaptersSection.innerHTML += `<h5>Add Chapter</h5><input type="text" class="chapter-title" placeholder="New Chapter Title"><button class="add-chapter-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}">Add Chapter</button>`;
-        container.appendChild(chaptersSection);
-        return container;
-    }
-
-    function createChapterElement(batchId, subjectId, chapterId, chapter) {
-        const path = `batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}`;
-        const isCollapsed = !openItemsState.has(path);
-        const container = document.createElement('div');
-        container.style.marginBottom = '15px';
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.dataset.path = path;
-        item.innerHTML = `<i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i><span class="item-title">${chapter.title}</span><div class="item-actions"><button class="action-btn edit-btn" data-path="${path}" data-current-title="${chapter.title}"><i class="fas fa-pencil-alt"></i></button><button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button></div>`;
-        container.appendChild(item);
-
-        const contentListSection = document.createElement('div');
-        contentListSection.className = `collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
-        if (chapter.content) {
-            contentListSection.innerHTML += `<h6>Content in ${chapter.title}</h6>`;
-            Object.entries(chapter.content).forEach(([contentId, contentItem]) => {
-                const contentPath = `${path}/content/${contentId}`;
-                contentListSection.innerHTML += `<div class="item"><span class="item-title">[${contentItem.type}] ${contentItem.title}</span><div class="item-actions"><button class="action-btn edit-btn" data-path="${contentPath}" data-current-title="${contentItem.title}" data-current-url="${contentItem.url}"><i class="fas fa-pencil-alt"></i></button><button class="action-btn delete-btn" data-path="${contentPath}"><i class="fas fa-trash"></i></button></div></div>`;
-            });
-        }
-        container.appendChild(contentListSection);
+        const chaptersContainer = document.createElement('div');
+        chaptersContainer.className = `nested-section collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
         
-        const addContentForm = document.createElement('div');
-        addContentForm.className = 'add-content-form';
-        const lastType = sessionStorage.getItem('lastContentType') || 'lecture';
-        addContentForm.innerHTML = `<h6>Add Content to ${chapter.title}</h6>
-            <select class="content-type">
-                <option value="lecture" ${lastType === 'lecture' ? 'selected' : ''}>Lecture</option>
-                <option value="note" ${lastType === 'note' ? 'selected' : ''}>Note</option>
-                <option value="dpp" ${lastType === 'dpp' ? 'selected' : ''}>DPP</option>
-            </select>
-            <input type="text" class="content-title" placeholder="Content Title"><input type="text" class="content-url" placeholder="Content Link/URL">
-            <button class="add-content-btn" data-path-prefix="${path}/content">Add Content</button>`;
-        container.appendChild(addContentForm);
-        return container;
+        // Recursive call for chapters
+        appendChapterElements(chaptersContainer, subject.chapters || {}, `${subjectPath}/chapters`);
+        
+        chaptersContainer.innerHTML += `<div class="add-form"><h6>Add Chapter to ${subject.title}</h6><input type="text" placeholder="New Chapter Title"><button class="add-btn" data-path="${subjectPath}/chapters">Add Chapter</button></div>`;
+        subjectContainer.appendChild(chaptersContainer);
+        return subjectContainer;
     }
 
-    batchesListDiv.addEventListener('click', async e => {
+    function appendChapterElements(parentContainer, chapters, basePath) {
+        Object.entries(chapters || {}).forEach(([chapterId, chapter]) => {
+            const chapterPath = `${basePath}/${chapterId}`;
+            const isCollapsed = !openItemsState.has(chapterPath);
+            const chapterContainer = document.createElement('div');
+            chapterContainer.className = 'nested-section';
+            
+            chapterContainer.innerHTML = `
+                <div class="item" data-path="${chapterPath}">
+                    <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
+                    <span class="item-title">${chapter.title}</span>
+                    <div class="item-actions">
+                        <button class="action-btn edit-btn" data-path="${chapterPath}"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="action-btn delete-btn" data-path="${chapterPath}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+
+            const innerContentContainer = document.createElement('div');
+            innerContentContainer.className = `nested-section collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
+
+            // Recursive call for sub-chapters
+            appendChapterElements(innerContentContainer, chapter.chapters || {}, `${chapterPath}/chapters`);
+
+            // Add Content Form
+            const lastType = sessionStorage.getItem('lastContentType') || 'lecture';
+            innerContentContainer.innerHTML += `
+                <div class="add-form">
+                    <h6>Add Content to ${chapter.title}</h6>
+                    <select class="content-type">
+                        <option value="lecture" ${lastType === 'lecture' ? 'selected' : ''}>Lecture</option>
+                        <option value="note" ${lastType === 'note' ? 'selected' : ''}>Note</option>
+                        <option value="dpp" ${lastType === 'dpp' ? 'selected' : ''}>DPP</option>
+                    </select>
+                    <input type="text" class="content-title" placeholder="Content Title">
+                    <input type="text" class="content-url" placeholder="Content URL">
+                    <button class="add-content-btn" data-path="${chapterPath}/content">Add Content</button>
+                </div>`;
+            
+            // Add Sub-Chapter Form
+            innerContentContainer.innerHTML += `
+                <div class="add-form">
+                    <h6>Add Sub-chapter to ${chapter.title}</h6>
+                    <input type="text" placeholder="New Sub-chapter Title">
+                    <button class="add-btn" data-path="${chapterPath}/chapters">Add Sub-chapter</button>
+                </div>`;
+
+            chapterContainer.appendChild(innerContentContainer);
+            parentContainer.appendChild(chapterContainer);
+        });
+    }
+    
+    // Main data listener
+    onValue(ref(database), (snapshot) => {
+        const data = snapshot.val() || {};
+        renderUI(data);
+        document.getElementById('total-visits').textContent = data.analytics?.totalVisits || 0;
+        document.getElementById('realtime-users').textContent = data.presences ? Object.keys(data.presences).length : 0;
+        const settings = data.settings || {};
+        document.getElementById('logo-link').value = settings.logoLink || '';
+        document.getElementById('telegram-link').value = settings.telegramLink || '';
+        document.getElementById('contact-link').value = settings.contactLink || '';
+    });
+
+    // Event Delegation for all clicks
+    document.querySelector('.container').addEventListener('click', async (e) => {
         const target = e.target;
-        const button = target.closest('button');
-        const toggle = target.closest('.toggle-btn');
         
-        if (button) {
-            e.stopPropagation();
-            if (button.matches('.reorder-up-btn, .reorder-down-btn')) {
-                const index = parseInt(button.dataset.index, 10);
-                const direction = button.matches('.reorder-up-btn') ? -1 : 1;
-                const otherIndex = index + direction;
-                if (otherIndex >= 0 && otherIndex < sortedBatches.length) {
-                    const [currentKey, currentBatch] = sortedBatches[index];
-                    const [otherKey, otherBatch] = sortedBatches[otherIndex];
-                    const updates = {};
-                    updates[`batches/${currentKey}/order`] = otherBatch.order;
-                    updates[`batches/${otherKey}/order`] = currentBatch.order;
-                    await update(ref(database), updates);
-                }
-            } else if (button.classList.contains('delete-btn')) { 
-                const path = button.dataset.path;
-                if (confirm('Are you sure?')) remove(ref(database, path)); 
-            } else if(button.classList.contains('edit-btn')){
-                const path = button.dataset.path;
-                const currentTitle = button.dataset.currentTitle;
-                const newTitle = prompt("Enter new title:", currentTitle);
-                if(newTitle !== null && newTitle.trim()) {
-                    const currentUrl = button.dataset.currentUrl;
-                    if(currentUrl !== undefined) {
-                        const newUrl = prompt("Enter new URL:", currentUrl);
-                        if(newUrl !== null) update(ref(database, path), { title: newTitle, url: newUrl });
-                    } else {
-                        update(ref(database, path), { title: newTitle });
-                    }
-                }
-            } else if (button.matches('.add-subject-btn')) { 
-                const batchId = button.dataset.batchId; 
-                const input = button.previousElementSibling; 
-                if (input.value) { push(ref(database, `batches/${batchId}/subjects`), { title: input.value }); input.value = ''; } 
-            } else if (button.matches('.add-chapter-btn')) { 
-                const { batchId, subjectId } = button.dataset; 
-                const input = button.previousElementSibling; 
-                if (input.value) { push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters`), { title: input.value }); input.value = ''; } 
-            } else if (button.matches('.add-content-btn')) {
-                const pathPrefix = button.dataset.pathPrefix;
-                const form = button.closest('.add-content-form');
-                const type = form.querySelector('.content-type').value;
-                const titleInput = form.querySelector('.content-title');
-                const urlInput = form.querySelector('.content-url');
-                if (titleInput.value && urlInput.value) {
-                    sessionStorage.setItem('lastContentType', type);
-                    push(ref(database, pathPrefix), { type, title: titleInput.value, url: urlInput.value }); 
-                    titleInput.value = ''; urlInput.value = ''; 
-                }
+        // Toggle button
+        if (target.matches('.toggle-btn')) {
+            target.classList.toggle('collapsed');
+            const collapsible = target.closest('[data-path]').nextElementSibling;
+            if (collapsible) collapsible.classList.toggle('collapsed');
+        }
+
+        const button = target.closest('button');
+        if (!button) return;
+
+        // Add buttons
+        if (button.matches('.add-btn')) {
+            const form = button.closest('.add-form');
+            const input = form.querySelector('input[type="text"]');
+            if (input.value) {
+                push(ref(database, button.dataset.path), { title: input.value });
+                input.value = '';
             }
-        } else if (toggle) {
-            toggle.classList.toggle('collapsed');
-            const collapsible = toggle.closest('.item').nextElementSibling;
-            if (collapsible) {
-                collapsible.classList.toggle('collapsed');
+        } else if (button.matches('#add-batch-btn')) {
+            const title = document.getElementById('batch-title').value;
+            const imageUrl = document.getElementById('batch-image').value;
+            const order = document.querySelectorAll('#batches-list > .section').length;
+            if (title && imageUrl) {
+                push(ref(database, 'batches'), { title, imageUrl, order });
+                document.getElementById('batch-title').value = '';
+                document.getElementById('batch-image').value = '';
+            }
+        } else if (button.matches('.add-content-btn')) {
+            const form = button.closest('.add-form');
+            const type = form.querySelector('.content-type').value;
+            const title = form.querySelector('.content-title').value;
+            const url = form.querySelector('.content-url').value;
+            if (title && url) {
+                sessionStorage.setItem('lastContentType', type);
+                push(ref(database, button.dataset.path), { type, title, url });
+                form.querySelector('.content-title').value = '';
+                form.querySelector('.content-url').value = '';
+            }
+        }
+        // Action buttons
+        else if (button.matches('.delete-btn')) {
+            if (confirm('Are you sure? This will delete all content inside it too.')) {
+                remove(ref(database, button.dataset.path));
+            }
+        } else if (button.matches('.edit-btn')) {
+            const currentTitle = button.closest('.item').querySelector('.item-title').textContent;
+            const newTitle = prompt('Enter new title:', currentTitle);
+            if (newTitle) update(ref(database, button.dataset.path), { title: newTitle });
+        } else if (button.matches('#save-settings-btn')) {
+            set(ref(database, 'settings'), {
+                logoLink: document.getElementById('logo-link').value,
+                telegramLink: document.getElementById('telegram-link').value,
+                contactLink: document.getElementById('contact-link').value
+            });
+            alert('Settings Saved!');
+        } else if (button.matches('.reorder-btn')) {
+            const sortedBatches = Object.entries(document.val.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
+            const index = parseInt(button.dataset.index);
+            const direction = button.dataset.direction === 'up' ? -1 : 1;
+            const otherIndex = index + direction;
+
+            if (otherIndex >= 0 && otherIndex < sortedBatches.length) {
+                const [currentKey, currentBatch] = sortedBatches[index];
+                const [otherKey, otherBatch] = sortedBatches[otherIndex];
+                const updates = {};
+                updates[`batches/${currentKey}/order`] = otherBatch.order;
+                updates[`batches/${otherKey}/order`] = currentBatch.order;
+                await update(ref(database), updates);
             }
         }
     });
