@@ -7,58 +7,97 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        :root { --primary-bg: #141b2d; --secondary-bg: #1f2a40; --card-bg: #293651; --button-color: #868dfb; --danger-color: #ff7e5f; --edit-color: #45b6fe; --green-color: #2ecc71; }
+        :root {
+            --primary-bg: #10141f; --secondary-bg: #1f2a40; --card-bg: #283040;
+            --button-color: #6c5ce7; --danger-color: #e74c3c; --edit-color: #3498db;
+            --green-color: #2ecc71; --border-color: #3e4d6a; --text-primary: #ecf0f1;
+            --text-secondary: #bdc3c7;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background-color: var(--primary-bg); color: white; font-size: 14px; }
-        .container { max-width: 900px; margin: 20px auto; padding: 20px; }
-        h2, h3, h4, h5, h6 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
-        h4, h5, h6 { border-bottom-style: dashed; font-size: 1em; margin-top: 20px;}
-        h5, h6 { border-color: var(--card-bg); }
-        .section { background-color: var(--secondary-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: none; font-family: 'Poppins', sans-serif; font-size: 1em; }
-        input, select { background-color: var(--card-bg); color: white; }
-        button { background-color: var(--button-color); color: white; font-weight: 600; cursor: pointer; }
-        button:disabled { background-color: #555; cursor: not-allowed; }
-        .stats-section { display: flex; justify-content: space-around; text-align: center; }
-        .item { display: flex; align-items: center; background-color: var(--card-bg); padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; }
-        .item-title { font-weight: 500; flex-grow: 1; margin-left: 10px; }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--primary-bg); color: var(--text-primary); font-size: 14px; }
+        .container { max-width: 950px; margin: 20px auto; padding: 20px; }
+        
+        /* --- MODAL STYLES --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1001; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: var(--secondary-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); }
+        .modal-content h3 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
+        .modal-overlay.active { display: flex; }
+
+        /* --- UI Elements --- */
+        .section-box { background: var(--secondary-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        .item-header { display: flex; align-items: center; background-color: var(--card-bg); padding: 12px 15px; border-radius: 8px; }
+        .item-header .icon { margin-right: 12px; color: var(--edit-color); font-size: 1.2em; width: 25px; text-align: center; }
+        .item-header .icon.fa-layer-group { color: #9b59b6; } .item-header .icon.fa-book { color: #3498db; }
+        .item-header .icon.fa-file-alt { color: #1abc9c; } .item-header .icon.fa-folder { color: #f1c40f; }
+        .item-title { font-weight: 500; flex-grow: 1; }
         .item-actions { display: flex; gap: 10px; margin-left: auto; }
-        .action-btn { background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 5px;}
-        .action-btn.edit-btn { color: var(--edit-color); }
-        .action-btn.delete-btn { color: var(--danger-color); }
-        .toggle-btn { cursor: pointer; transition: transform 0.3s; width: 20px; text-align: center; }
+        .action-btn { background: none; border: none; font-size: 1.1em; cursor: pointer; color: var(--text-secondary); }
+        .action-btn:hover { color: white; }
+        .toggle-btn { cursor: pointer; transition: transform 0.3s; width: 20px; text-align: center; margin-right: 5px; }
         .toggle-btn.collapsed { transform: rotate(-90deg); }
-        .nested-section { border-left: 3px solid var(--button-color); padding-left: 15px; margin-top: 10px; }
+        
+        .nested-container { padding-left: 20px; margin-top: 10px; border-left: 2px solid var(--border-color); }
+        .collapsible-content { display: block; padding-top: 15px; }
         .collapsible-content.collapsed { display: none; }
-        .add-form { padding: 15px; background-color: var(--primary-bg); border-radius: 8px; margin-top: 10px;}
+        .content-section { padding: 15px; border-radius: 8px; background: var(--primary-bg); margin-top: 15px; }
+        .content-section-header { display: flex; align-items: center; cursor: pointer; padding: 10px; background: var(--card-bg); border-radius: 8px; }
+        .content-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
+
+        .add-form { padding: 15px; background-color: var(--card-bg); border-radius: 8px; margin-top: 15px; }
+        .add-form h6 { margin-top: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'Poppins', sans-serif; font-size: 1em; background: var(--card-bg); color: var(--text-primary); }
+        button { background: var(--button-color); color: white; font-weight: 600; cursor: pointer; border: none; }
+        #user-visits-count { font-size: 1.5em; color: var(--green-color); }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2><i class="fas fa-cogs"></i> Website Admin Panel</h2>
-    <div class="section stats-section">
-        <div class="stat-item"><h4><i class="fas fa-signal"></i> Realtime Users</h4><div id="realtime-users" class="count">0</div></div>
-        <div class="stat-item"><h4><i class="fas fa-users"></i> Total Visits</h4><div id="total-visits" class="count">0</div></div>
+    <div class="container">
+        <h2><i class="fas fa-cogs"></i> Admin Panel</h2>
+
+        <div class="section-box">
+            <h3><i class="fas fa-chart-line"></i> Real-time Analytics</h3>
+            <p style="font-size: 1.1em; margin-bottom: 5px;">Total User Visits:</p>
+            <strong id="user-visits-count">Loading...</strong>
+        </div>
+        
+        <div class="section-box">
+            <h3><i class="fas fa-globe"></i> General Settings</h3>
+            <input type="text" id="logo-link" placeholder="Logo Link">
+            <input type="text" id="telegram-link" placeholder="Telegram Channel Link">
+            <input type="text" id="contact-link" placeholder="Contact/Support Link">
+            <button id="save-settings-btn">Save Settings</button>
+        </div>
+
+        <div class="section-box">
+            <h3><i class="fas fa-layer-group"></i> Manage Batches</h3>
+            <div class="add-form" style="background:var(--secondary-bg);">
+                <input type="text" id="batch-title" placeholder="New Batch Title">
+                <input type="text" id="batch-image" placeholder="New Batch Image URL">
+                <button id="add-batch-btn">Add New Batch</button>
+            </div>
+            <div id="batches-list"></div>
+        </div>
     </div>
-    <div class="section">
-        <h3><i class="fas fa-globe"></i> General Settings</h3>
-        <input type="text" id="logo-link" placeholder="Logo Link">
-        <input type="text" id="telegram-link" placeholder="Telegram Channel Link">
-        <input type="text" id="contact-link" placeholder="Contact/Support Link">
-        <button id="save-settings-btn">Save Settings</button>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Edit Content</h3>
+            <input type="hidden" id="edit-path">
+            <label>Title</label>
+            <input type="text" id="edit-title">
+            <label>URL</label>
+            <input type="text" id="edit-url">
+            <label>Type</label>
+            <select id="edit-type"><option value="lecture">Lecture</option><option value="note">Note</option><option value="dpp">DPP</option></select>
+            <button id="save-edit-btn">Save Changes</button>
+            <button id="cancel-edit-btn" style="background: var(--danger-color);">Cancel</button>
+        </div>
     </div>
-    <div class="section">
-        <h3><i class="fas fa-layer-group"></i> Manage Batches</h3>
-        <input type="text" id="batch-title" placeholder="New Batch Title">
-        <input type="text" id="batch-image" placeholder="New Batch Image URL">
-        <button id="add-batch-btn">Add New Batch</button>
-        <div id="batches-list" class="item-list"></div>
-    </div>
-</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
+    import { getDatabase, ref, set, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-database.js";
     
     const firebaseConfig = {
       apiKey: "AIzaSyC1m25mHpA59xBQmF34BfA1K_vY2pUSrLI",
@@ -73,6 +112,7 @@
     const database = getDatabase(app);
 
     let openItemsState = new Set();
+    let fullData = {};
 
     function saveOpenState() {
         openItemsState.clear();
@@ -82,202 +122,234 @@
         });
     }
 
-    function renderUI(data) {
+    function renderUI() {
         saveOpenState();
         const batchesListDiv = document.getElementById('batches-list');
         batchesListDiv.innerHTML = '';
-        const sortedBatches = Object.entries(data.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
+        const sortedBatches = Object.entries(fullData.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
         
         sortedBatches.forEach(([batchId, batch], index) => {
-            const batchPath = `batches/${batchId}`;
-            const isBatchCollapsed = !openItemsState.has(batchPath);
-            const batchContainer = document.createElement('div');
-            batchContainer.className = 'section';
-            batchContainer.innerHTML = `
-                <div class="item" data-path="${batchPath}">
-                    <i class="fas fa-chevron-down toggle-btn ${isBatchCollapsed ? 'collapsed' : ''}"></i>
-                    <span class="item-title">${batch.title}</span>
-                    <div class="item-actions">
-                        <button class="action-btn reorder-btn" data-direction="up" data-index="${index}" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
-                        <button class="action-btn reorder-btn" data-direction="down" data-index="${index}" ${index === sortedBatches.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
-                        <button class="action-btn edit-btn" data-path="${batchPath}"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="action-btn delete-btn" data-path="${batchPath}"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>`;
-            
-            const subjectsContainer = document.createElement('div');
-            subjectsContainer.className = `nested-section collapsible-content ${isBatchCollapsed ? 'collapsed' : ''}`;
-            
-            Object.entries(batch.subjects || {}).forEach(([subjectId, subject]) => {
-                subjectsContainer.appendChild(createSubjectElement(subjectId, subject, `${batchPath}/subjects/${subjectId}`));
-            });
-
-            subjectsContainer.innerHTML += `<div class="add-form"><h6>Add Subject to ${batch.title}</h6><input type="text" placeholder="New Subject Title"><button class="add-btn" data-path="${batchPath}/subjects">Add Subject</button></div>`;
-            batchContainer.appendChild(subjectsContainer);
-            batchesListDiv.appendChild(batchContainer);
+            batchesListDiv.appendChild(createBatchElement(batch, `batches/${batchId}`, index, sortedBatches.length));
         });
     }
 
-    function createSubjectElement(subjectId, subject, subjectPath) {
-        const isCollapsed = !openItemsState.has(subjectPath);
-        const subjectContainer = document.createElement('div');
-        subjectContainer.innerHTML = `
-            <div class="item" data-path="${subjectPath}">
+    function createBatchElement(batch, path, index, total) {
+        const isCollapsed = !openItemsState.has(path);
+        const container = document.createElement('div');
+        container.className = 'section-box';
+        container.innerHTML = `
+            <div class="item-header" data-path="${path}">
                 <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
-                <span class="item-title">${subject.title}</span>
+                <i class="fas fa-layer-group icon"></i>
+                <span class="item-title">${batch.title}</span>
                 <div class="item-actions">
-                    <button class="action-btn edit-btn" data-path="${subjectPath}"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="action-btn delete-btn" data-path="${subjectPath}"><i class="fas fa-trash"></i></button>
+                    <button class="action-btn reorder-btn" data-index="${index}"><i class="fas fa-arrow-up"></i></button>
+                    <button class="action-btn reorder-btn" data-index="${index}"><i class="fas fa-arrow-down"></i></button>
+                    <button class="action-btn edit-btn" data-path="${path}"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button>
                 </div>
-            </div>`;
-
-        const chaptersContainer = document.createElement('div');
-        chaptersContainer.className = `nested-section collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
+            </div>
+            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}"></div>`;
         
-        // Recursive call for chapters
-        appendChapterElements(chaptersContainer, subject.chapters || {}, `${subjectPath}/chapters`);
-        
-        chaptersContainer.innerHTML += `<div class="add-form"><h6>Add Chapter to ${subject.title}</h6><input type="text" placeholder="New Chapter Title"><button class="add-btn" data-path="${subjectPath}/chapters">Add Chapter</button></div>`;
-        subjectContainer.appendChild(chaptersContainer);
-        return subjectContainer;
+        const contentDiv = container.querySelector('.collapsible-content');
+        Object.entries(batch.subjects || {}).forEach(([subjectId, subject]) => {
+            contentDiv.appendChild(createSubjectElement(subject, `${path}/subjects/${subjectId}`));
+        });
+        contentDiv.innerHTML += `<div class="add-form"><h6>Add Subject</h6><input type="text" placeholder="New Subject Title"><button class="add-btn" data-path="${path}/subjects">Add Subject</button></div>`;
+        return container;
     }
 
-    function appendChapterElements(parentContainer, chapters, basePath) {
-        Object.entries(chapters || {}).forEach(([chapterId, chapter]) => {
-            const chapterPath = `${basePath}/${chapterId}`;
-            const isCollapsed = !openItemsState.has(chapterPath);
-            const chapterContainer = document.createElement('div');
-            chapterContainer.className = 'nested-section';
+    function createSubjectElement(subject, path) {
+        const isCollapsed = !openItemsState.has(path);
+        const container = document.createElement('div');
+        container.className = 'nested-container';
+        container.innerHTML = `
+            <div class="item-header" data-path="${path}">
+                <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
+                <i class="fas fa-book icon"></i>
+                <span class="item-title">${subject.title}</span>
+                <div class="item-actions">
+                    <button class="action-btn edit-btn" data-path="${path}"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="collapsible-content ${isCollapsed ? 'collapsed' : ''}"></div>`;
+        
+        const contentDiv = container.querySelector('.collapsible-content');
+        contentDiv.dataset.path = `${path}/chapters`; 
+        appendChapterElements(contentDiv, subject.chapters || {});
+        contentDiv.innerHTML += `<div class="add-form"><h6>Add Chapter</h6><input type="text" placeholder="New Chapter Title"><button class="add-btn" data-path="${path}/chapters">Add Chapter</button></div>`;
+        return container;
+    }
+
+    function appendChapterElements(parentContainer, chapters) {
+        Object.entries(chapters).forEach(([id, chapter]) => {
+            const path = `${parentContainer.dataset.path || ''}/${id}`;
+            const isParentCollapsed = !openItemsState.has(path);
+            const isContentCollapsed = !openItemsState.has(`${path}/content-list`);
+            const hasSubChapters = chapter.chapters && Object.keys(chapter.chapters).length > 0;
             
-            chapterContainer.innerHTML = `
-                <div class="item" data-path="${chapterPath}">
-                    <i class="fas fa-chevron-down toggle-btn ${isCollapsed ? 'collapsed' : ''}"></i>
+            const container = document.createElement('div');
+            container.className = 'nested-container';
+            container.innerHTML = `
+                <div class="item-header" data-path="${path}">
+                    <i class="fas fa-chevron-down toggle-btn ${isParentCollapsed ? 'collapsed' : ''}"></i>
+                    <i class="fas ${hasSubChapters ? 'fa-folder' : 'fa-file-alt'} icon"></i>
                     <span class="item-title">${chapter.title}</span>
                     <div class="item-actions">
-                        <button class="action-btn edit-btn" data-path="${chapterPath}"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="action-btn delete-btn" data-path="${chapterPath}"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn edit-btn" data-path="${path}"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="collapsible-content ${isParentCollapsed ? 'collapsed' : ''}">
+                    <div class="content-section">
+                        <div class="content-section-header" data-path="${path}/content-list">
+                            <i class="fas fa-chevron-down toggle-btn ${isContentCollapsed ? 'collapsed' : ''}"></i>
+                            <b>Existing Content</b>
+                        </div>
+                        <div class="collapsible-content ${isContentCollapsed ? 'collapsed' : ''}" id="content-list-${id}"></div>
+                    </div>
+                    <div id="sub-chapter-list-${id}" data-path="${path}/chapters"></div>
+                    <div class="add-form">
+                        <h6>Add Content to ${chapter.title}</h6>
+                        <input class="content-title" placeholder="Title"><input class="content-url" placeholder="URL">
+                        <select class="content-type"><option value="lecture">Lecture</option><option value="note">Note</option><option value="dpp">DPP</option></select>
+                        <button class="add-content-btn" data-path="${path}/content">Add</button>
+                    </div>
+                    <div class="add-form">
+                        <h6>Add Sub-chapter to ${chapter.title}</h6>
+                        <input type="text" placeholder="Title"><button class="add-btn" data-path="${path}/chapters">Add</button>
                     </div>
                 </div>`;
-
-            const innerContentContainer = document.createElement('div');
-            innerContentContainer.className = `nested-section collapsible-content ${isCollapsed ? 'collapsed' : ''}`;
-
-            // Recursive call for sub-chapters
-            appendChapterElements(innerContentContainer, chapter.chapters || {}, `${chapterPath}/chapters`);
-
-            // Add Content Form
-            const lastType = sessionStorage.getItem('lastContentType') || 'lecture';
-            innerContentContainer.innerHTML += `
-                <div class="add-form">
-                    <h6>Add Content to ${chapter.title}</h6>
-                    <select class="content-type">
-                        <option value="lecture" ${lastType === 'lecture' ? 'selected' : ''}>Lecture</option>
-                        <option value="note" ${lastType === 'note' ? 'selected' : ''}>Note</option>
-                        <option value="dpp" ${lastType === 'dpp' ? 'selected' : ''}>DPP</option>
-                    </select>
-                    <input type="text" class="content-title" placeholder="Content Title">
-                    <input type="text" class="content-url" placeholder="Content URL">
-                    <button class="add-content-btn" data-path="${chapterPath}/content">Add Content</button>
-                </div>`;
             
-            // Add Sub-Chapter Form
-            innerContentContainer.innerHTML += `
-                <div class="add-form">
-                    <h6>Add Sub-chapter to ${chapter.title}</h6>
-                    <input type="text" placeholder="New Sub-chapter Title">
-                    <button class="add-btn" data-path="${chapterPath}/chapters">Add Sub-chapter</button>
-                </div>`;
-
-            chapterContainer.appendChild(innerContentContainer);
-            parentContainer.appendChild(chapterContainer);
+            const contentListDiv = container.querySelector(`#content-list-${id}`);
+            if (chapter.content) {
+                Object.entries(chapter.content).forEach(([contentId, item]) => {
+                    contentListDiv.innerHTML += `
+                        <div class="content-item">
+                            <span style="color:var(--text-secondary);margin-right:10px;font-weight:bold;">[${item.type}]</span>
+                            <span class="item-title">${item.title}</span>
+                            <div class="item-actions">
+                                <button class="action-btn edit-content-btn" data-path="${path}/content/${contentId}"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="action-btn delete-btn" data-path="${path}/content/${contentId}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+            } else {
+                contentListDiv.innerHTML = '<p style="padding:10px;color:var(--text-secondary);">No content added yet.</p>';
+            }
+            
+            const subChapterListDiv = container.querySelector(`#sub-chapter-list-${id}`);
+            if (hasSubChapters) {
+                appendChapterElements(subChapterListDiv, chapter.chapters);
+            }
+            parentContainer.appendChild(container);
         });
     }
     
-    // Main data listener
-    onValue(ref(database), (snapshot) => {
-        const data = snapshot.val() || {};
-        renderUI(data);
-        document.getElementById('total-visits').textContent = data.analytics?.totalVisits || 0;
-        document.getElementById('realtime-users').textContent = data.presences ? Object.keys(data.presences).length : 0;
-        const settings = data.settings || {};
+    // --- Data Listeners ---
+    onValue(ref(database, 'batches'), (snapshot) => {
+        fullData.batches = snapshot.val();
+        renderUI();
+    });
+    onValue(ref(database, 'settings'), (snapshot) => {
+        const settings = snapshot.val() || {};
         document.getElementById('logo-link').value = settings.logoLink || '';
         document.getElementById('telegram-link').value = settings.telegramLink || '';
         document.getElementById('contact-link').value = settings.contactLink || '';
     });
 
-    // Event Delegation for all clicks
-    document.querySelector('.container').addEventListener('click', async (e) => {
+    // NEW: Listen for changes in the user visits count
+    const visitsRef = ref(database, 'analytics/visits');
+    onValue(visitsRef, (snapshot) => {
+        const count = snapshot.val() || 0;
+        document.getElementById('user-visits-count').textContent = count.toLocaleString();
+    });
+
+
+    // --- Event Delegation ---
+    document.body.addEventListener('click', async (e) => {
         const target = e.target;
-        
-        // Toggle button
-        if (target.matches('.toggle-btn')) {
-            target.classList.toggle('collapsed');
-            const collapsible = target.closest('[data-path]').nextElementSibling;
-            if (collapsible) collapsible.classList.toggle('collapsed');
+        if (target.closest('.toggle-btn')) {
+            const toggleBtn = target.closest('.toggle-btn');
+            toggleBtn.classList.toggle('collapsed');
+            toggleBtn.closest('.item-header, .content-section-header').nextElementSibling?.classList.toggle('collapsed');
         }
 
         const button = target.closest('button');
         if (!button) return;
-
-        // Add buttons
+        
+        const path = button.dataset.path;
         if (button.matches('.add-btn')) {
-            const form = button.closest('.add-form');
-            const input = form.querySelector('input[type="text"]');
+            const input = button.previousElementSibling;
             if (input.value) {
-                push(ref(database, button.dataset.path), { title: input.value });
+                push(ref(database, path), { title: input.value });
                 input.value = '';
             }
         } else if (button.matches('#add-batch-btn')) {
             const title = document.getElementById('batch-title').value;
             const imageUrl = document.getElementById('batch-image').value;
-            const order = document.querySelectorAll('#batches-list > .section').length;
-            if (title && imageUrl) {
-                push(ref(database, 'batches'), { title, imageUrl, order });
-                document.getElementById('batch-title').value = '';
-                document.getElementById('batch-image').value = '';
-            }
+            const order = Object.keys(fullData.batches || {}).length;
+            if (title && imageUrl) push(ref(database, 'batches'), { title, imageUrl, order });
         } else if (button.matches('.add-content-btn')) {
             const form = button.closest('.add-form');
-            const type = form.querySelector('.content-type').value;
-            const title = form.querySelector('.content-title').value;
-            const url = form.querySelector('.content-url').value;
-            if (title && url) {
-                sessionStorage.setItem('lastContentType', type);
-                push(ref(database, button.dataset.path), { type, title, url });
-                form.querySelector('.content-title').value = '';
-                form.querySelector('.content-url').value = '';
-            }
-        }
-        // Action buttons
-        else if (button.matches('.delete-btn')) {
-            if (confirm('Are you sure? This will delete all content inside it too.')) {
-                remove(ref(database, button.dataset.path));
-            }
+            const newContent = {
+                title: form.querySelector('.content-title').value,
+                url: form.querySelector('.content-url').value,
+                type: form.querySelector('.content-type').value,
+            };
+            if (newContent.title && newContent.url) push(ref(database, path), newContent);
+        } else if (button.matches('.delete-btn')) {
+            if (confirm('Are you sure?')) remove(ref(database, path));
         } else if (button.matches('.edit-btn')) {
-            const currentTitle = button.closest('.item').querySelector('.item-title').textContent;
+            const currentTitle = button.closest('.item-header').querySelector('.item-title').textContent;
             const newTitle = prompt('Enter new title:', currentTitle);
-            if (newTitle) update(ref(database, button.dataset.path), { title: newTitle });
+            if (newTitle) update(ref(database, path), { title: newTitle });
+        } else if (button.matches('.edit-content-btn')) {
+            try {
+                const itemSnapshot = await get(ref(database, path));
+                const item = itemSnapshot.val();
+                if (item) {
+                    document.getElementById('edit-path').value = path;
+                    document.getElementById('edit-title').value = item.title;
+                    document.getElementById('edit-url').value = item.url;
+                    document.getElementById('edit-type').value = item.type;
+                    document.getElementById('edit-modal').classList.add('active');
+                } else {
+                    alert("Error: Could not find the item to edit.");
+                }
+            } catch (error) {
+                console.error("Failed to fetch content for editing:", error);
+                alert("An error occurred. Please check the console.");
+            }
+        } else if (button.matches('#save-edit-btn')) {
+            const editPath = document.getElementById('edit-path').value;
+            const updatedData = {
+                title: document.getElementById('edit-title').value.trim(),
+                url: document.getElementById('edit-url').value.trim(),
+                type: document.getElementById('edit-type').value
+            };
+            if (!updatedData.title || !updatedData.url || !editPath) {
+                alert("Error: Title and URL cannot be empty.");
+                return;
+            }
+            try {
+                await update(ref(database, editPath), updatedData);
+                document.getElementById('edit-modal').classList.remove('active');
+            } catch (error) {
+                console.error("Firebase update failed:", error);
+                alert("Failed to save changes. Please check console for errors.");
+            }
+        } else if (button.matches('#cancel-edit-btn')) {
+            document.getElementById('edit-modal').classList.remove('active');
         } else if (button.matches('#save-settings-btn')) {
-            set(ref(database, 'settings'), {
+            const settings = {
                 logoLink: document.getElementById('logo-link').value,
                 telegramLink: document.getElementById('telegram-link').value,
                 contactLink: document.getElementById('contact-link').value
-            });
+            };
+            await set(ref(database, 'settings'), settings);
             alert('Settings Saved!');
-        } else if (button.matches('.reorder-btn')) {
-            const sortedBatches = Object.entries(document.val.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
-            const index = parseInt(button.dataset.index);
-            const direction = button.dataset.direction === 'up' ? -1 : 1;
-            const otherIndex = index + direction;
-
-            if (otherIndex >= 0 && otherIndex < sortedBatches.length) {
-                const [currentKey, currentBatch] = sortedBatches[index];
-                const [otherKey, otherBatch] = sortedBatches[otherIndex];
-                const updates = {};
-                updates[`batches/${currentKey}/order`] = otherBatch.order;
-                updates[`batches/${otherKey}/order`] = currentBatch.order;
-                await update(ref(database), updates);
-            }
         }
     });
 </script>
