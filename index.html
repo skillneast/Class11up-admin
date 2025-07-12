@@ -34,6 +34,8 @@
         .toggle-btn.collapsed { transform: rotate(-90deg); }
         .nested-section { border-left: 3px solid var(--button-color); padding-left: 15px; margin-top: 15px; }
         .collapsible-content.collapsed { display: none; }
+        .add-content-form { padding: 15px; background-color: var(--primary-bg); border-radius: 8px; margin-top: 10px;}
+
     </style>
 </head>
 <body>
@@ -145,29 +147,66 @@
     }
 
     function createChapterElement(batchId, subjectId, chapterId, chapter) {
-        const container = document.createElement('div');
+        const container = document.createElement('div'); // Main container for the chapter
+        container.style.marginBottom = '15px'; // Add some space between chapters
+
+        // 1. Visible Item (Title, Toggle, Edit, Delete)
         const item = document.createElement('div');
         item.className = 'item';
-        item.innerHTML = `<i class="fas fa-chevron-down toggle-btn collapsed"></i><span class="item-title">${chapter.title}</span><div class="item-actions"><button class="action-btn edit-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}" data-current-title="${chapter.title}"><i class="fas fa-pencil-alt"></i></button><button class="action-btn delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}"><i class="fas fa-trash"></i></button></div>`;
+        item.innerHTML = `
+            <i class="fas fa-chevron-down toggle-btn collapsed"></i>
+            <span class="item-title">${chapter.title}</span>
+            <div class="item-actions">
+                <button class="action-btn edit-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}" data-current-title="${chapter.title}"><i class="fas fa-pencil-alt"></i></button>
+                <button class="action-btn delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}"><i class="fas fa-trash"></i></button>
+            </div>`;
         container.appendChild(item);
 
-        const contentSection = document.createElement('div');
-        contentSection.className = 'collapsible-content collapsed';
-        contentSection.innerHTML = `<h6>Content in ${chapter.title}</h6>`;
+        // 2. Collapsible Section for EXISTING Content
+        const contentListSection = document.createElement('div');
+        contentListSection.className = 'collapsible-content collapsed';
         if (chapter.content) {
+            contentListSection.innerHTML += `<h6>Content in ${chapter.title}</h6>`;
             for(const contentId in chapter.content){
-                const item = chapter.content[contentId];
-                contentSection.innerHTML += `<div class="item"><span class="item-title">[${item.type}] ${item.title}</span><div class="item-actions"><button class="action-btn edit-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content/${contentId}" data-current-title="${item.title}" data-current-url="${item.url}"><i class="fas fa-pencil-alt"></i></button><button class="action-btn delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content/${contentId}"><i class="fas fa-trash"></i></button></div></div>`;
+                const contentItem = chapter.content[contentId];
+                const contentElement = document.createElement('div');
+                contentElement.className = 'item';
+                contentElement.innerHTML = `
+                    <span class="item-title">[${contentItem.type}] ${contentItem.title}</span>
+                    <div class="item-actions">
+                        <button class="action-btn edit-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content/${contentId}" data-current-title="${contentItem.title}" data-current-url="${contentItem.url}"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="action-btn delete-btn" data-path="batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content/${contentId}"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                contentListSection.appendChild(contentElement);
             }
+        } else {
+            contentListSection.innerHTML = `<p style="padding: 10px; color: #aaa;">No content yet. Use the form below to add some.</p>`;
         }
-        contentSection.innerHTML += `<h6>Add Content</h6><select class="content-type"><option value="lecture">Lecture</option><option value="note">Note</option><option value="dpp">DPP</option></select><input type="text" class="content-title" placeholder="Content Title"><input type="text" class="content-url" placeholder="Content Link/URL"><button class="add-content-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}" data-chapter-id="${chapterId}">Add Content</button>`;
-        container.appendChild(contentSection);
+        container.appendChild(contentListSection);
+        
+        // 3. ALWAYS VISIBLE Form to ADD New Content
+        const addContentForm = document.createElement('div');
+        addContentForm.className = 'add-content-form'; // New class for styling
+        addContentForm.innerHTML = `
+            <h6>Add Content to ${chapter.title}</h6>
+            <select class="content-type">
+                <option value="lecture">Lecture</option>
+                <option value="note">Note</option>
+                <option value="dpp">DPP</option>
+            </select>
+            <input type="text" class="content-title" placeholder="Content Title">
+            <input type="text" class="content-url" placeholder="Content Link/URL">
+            <button class="add-content-btn" data-batch-id="${batchId}" data-subject-id="${subjectId}" data-chapter-id="${chapterId}">Add Content</button>`;
+        container.appendChild(addContentForm);
+
         return container;
     }
+
 
     batchesListDiv.addEventListener('click', e => {
         const button = e.target.closest('button');
         const toggle = e.target.closest('.toggle-btn');
+
         if (button) {
             e.stopPropagation();
             const path = button.dataset.path;
@@ -189,15 +228,23 @@
             else if (button.matches('.add-chapter-btn')) { const { batchId, subjectId } = button.dataset; const input = button.previousElementSibling; if (input.value) { push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters`), { title: input.value }); input.value = ''; } }
             else if (button.matches('.add-content-btn')) {
                 const { batchId, subjectId, chapterId } = button.dataset;
-                const form = button.parentElement;
+                const form = button.closest('.add-content-form'); // Find the form
                 const type = form.querySelector('.content-type').value;
-                const title = form.querySelector('.content-title').value;
-                const url = form.querySelector('.content-url').value;
-                if (title && url) { push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content`), { type, title, url }); title.value = ''; url.value = ''; }
+                const titleInput = form.querySelector('.content-title');
+                const urlInput = form.querySelector('.content-url');
+                if (titleInput.value && urlInput.value) { 
+                    push(ref(database, `batches/${batchId}/subjects/${subjectId}/chapters/${chapterId}/content`), { type, title: titleInput.value, url: urlInput.value }); 
+                    titleInput.value = ''; 
+                    urlInput.value = ''; 
+                }
             }
         } else if (toggle) {
             toggle.classList.toggle('collapsed');
-            toggle.closest('.item').nextElementSibling.classList.toggle('collapsed');
+            // Find the collapsible content relative to the toggle's parent item
+            const collapsible = toggle.closest('.item').nextElementSibling;
+            if (collapsible && collapsible.classList.contains('collapsible-content')) {
+                collapsible.classList.toggle('collapsed');
+            }
         }
     });
 </script>
