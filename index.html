@@ -48,7 +48,7 @@
 
         input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'Poppins', sans-serif; font-size: 1em; background: var(--card-bg); color: var(--text-primary); }
         button { background: var(--button-color); color: white; font-weight: 600; cursor: pointer; border: none; }
-        #user-visits-count { font-size: 1.5em; color: var(--green-color); }
+        #user-visits-count, #active-users-count { font-size: 1.5em; color: var(--green-color); }
     </style>
 </head>
 <body>
@@ -59,6 +59,8 @@
             <h3><i class="fas fa-chart-line"></i> Real-time Analytics</h3>
             <p style="font-size: 1.1em; margin-bottom: 5px;">Total User Visits:</p>
             <strong id="user-visits-count">Loading...</strong>
+            <p style="font-size: 1.1em; margin-bottom: 5px; margin-top: 15px;">Currently Active Users:</p>
+            <strong id="active-users-count">Loading...</strong>
         </div>
         
         <div class="section-box">
@@ -131,6 +133,14 @@
         sortedBatches.forEach(([batchId, batch], index) => {
             batchesListDiv.appendChild(createBatchElement(batch, `batches/${batchId}`, index, sortedBatches.length));
         });
+        
+        // **FINAL FIX**: UI render hone ke baad, saved value ko set karo.
+        const savedType = localStorage.getItem('lastSelectedContentType');
+        if (savedType) {
+            document.querySelectorAll('.content-type').forEach(selectElement => {
+                selectElement.value = savedType;
+            });
+        }
     }
 
     function createBatchElement(batch, path, index, total) {
@@ -143,8 +153,6 @@
                 <i class="fas fa-layer-group icon"></i>
                 <span class="item-title">${batch.title}</span>
                 <div class="item-actions">
-                    <button class="action-btn reorder-btn" data-index="${index}"><i class="fas fa-arrow-up"></i></button>
-                    <button class="action-btn reorder-btn" data-index="${index}"><i class="fas fa-arrow-down"></i></button>
                     <button class="action-btn edit-btn" data-path="${path}"><i class="fas fa-pencil-alt"></i></button>
                     <button class="action-btn delete-btn" data-path="${path}"><i class="fas fa-trash"></i></button>
                 </div>
@@ -247,11 +255,11 @@
         });
     }
     
-    // --- Data Listeners ---
     onValue(ref(database, 'batches'), (snapshot) => {
         fullData.batches = snapshot.val();
         renderUI();
     });
+
     onValue(ref(database, 'settings'), (snapshot) => {
         const settings = snapshot.val() || {};
         document.getElementById('logo-link').value = settings.logoLink || '';
@@ -259,15 +267,18 @@
         document.getElementById('contact-link').value = settings.contactLink || '';
     });
 
-    // NEW: Listen for changes in the user visits count
     const visitsRef = ref(database, 'analytics/visits');
     onValue(visitsRef, (snapshot) => {
         const count = snapshot.val() || 0;
         document.getElementById('user-visits-count').textContent = count.toLocaleString();
     });
 
+    const presenceRef = ref(database, 'presence');
+    onValue(presenceRef, (snapshot) => {
+        const count = snapshot.numChildren();
+        document.getElementById('active-users-count').textContent = count;
+    });
 
-    // --- Event Delegation ---
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
         if (target.closest('.toggle-btn')) {
@@ -287,18 +298,31 @@
                 input.value = '';
             }
         } else if (button.matches('#add-batch-btn')) {
-            const title = document.getElementById('batch-title').value;
-            const imageUrl = document.getElementById('batch-image').value;
+            const titleInput = document.getElementById('batch-title');
+            const imageInput = document.getElementById('batch-image');
             const order = Object.keys(fullData.batches || {}).length;
-            if (title && imageUrl) push(ref(database, 'batches'), { title, imageUrl, order });
+            if (titleInput.value && imageInput.value) {
+                 push(ref(database, 'batches'), { title: titleInput.value, imageUrl: imageInput.value, order });
+                 titleInput.value = '';
+                 imageInput.value = '';
+            }
         } else if (button.matches('.add-content-btn')) {
             const form = button.closest('.add-form');
+            const titleInput = form.querySelector('.content-title');
+            const urlInput = form.querySelector('.content-url');
+            const typeSelect = form.querySelector('.content-type');
+            
             const newContent = {
-                title: form.querySelector('.content-title').value,
-                url: form.querySelector('.content-url').value,
-                type: form.querySelector('.content-type').value,
+                title: titleInput.value,
+                url: urlInput.value,
+                type: typeSelect.value,
             };
-            if (newContent.title && newContent.url) push(ref(database, path), newContent);
+            
+            if (newContent.title && newContent.url) {
+                await push(ref(database, path), newContent);
+                titleInput.value = '';
+                urlInput.value = '';
+            }
         } else if (button.matches('.delete-btn')) {
             if (confirm('Are you sure?')) remove(ref(database, path));
         } else if (button.matches('.edit-btn')) {
@@ -306,21 +330,14 @@
             const newTitle = prompt('Enter new title:', currentTitle);
             if (newTitle) update(ref(database, path), { title: newTitle });
         } else if (button.matches('.edit-content-btn')) {
-            try {
-                const itemSnapshot = await get(ref(database, path));
-                const item = itemSnapshot.val();
-                if (item) {
-                    document.getElementById('edit-path').value = path;
-                    document.getElementById('edit-title').value = item.title;
-                    document.getElementById('edit-url').value = item.url;
-                    document.getElementById('edit-type').value = item.type;
-                    document.getElementById('edit-modal').classList.add('active');
-                } else {
-                    alert("Error: Could not find the item to edit.");
-                }
-            } catch (error) {
-                console.error("Failed to fetch content for editing:", error);
-                alert("An error occurred. Please check the console.");
+            const itemSnapshot = await get(ref(database, path));
+            const item = itemSnapshot.val();
+            if (item) {
+                document.getElementById('edit-path').value = path;
+                document.getElementById('edit-title').value = item.title;
+                document.getElementById('edit-url').value = item.url;
+                document.getElementById('edit-type').value = item.type;
+                document.getElementById('edit-modal').classList.add('active');
             }
         } else if (button.matches('#save-edit-btn')) {
             const editPath = document.getElementById('edit-path').value;
@@ -329,16 +346,9 @@
                 url: document.getElementById('edit-url').value.trim(),
                 type: document.getElementById('edit-type').value
             };
-            if (!updatedData.title || !updatedData.url || !editPath) {
-                alert("Error: Title and URL cannot be empty.");
-                return;
-            }
-            try {
+            if (updatedData.title && updatedData.url && editPath) {
                 await update(ref(database, editPath), updatedData);
                 document.getElementById('edit-modal').classList.remove('active');
-            } catch (error) {
-                console.error("Firebase update failed:", error);
-                alert("Failed to save changes. Please check console for errors.");
             }
         } else if (button.matches('#cancel-edit-btn')) {
             document.getElementById('edit-modal').classList.remove('active');
@@ -350,6 +360,12 @@
             };
             await set(ref(database, 'settings'), settings);
             alert('Settings Saved!');
+        }
+    });
+
+    document.body.addEventListener('change', (e) => {
+        if (e.target.matches('.content-type')) {
+            localStorage.setItem('lastSelectedContentType', e.target.value);
         }
     });
 </script>
