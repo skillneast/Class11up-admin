@@ -16,15 +16,15 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Poppins', sans-serif; background-color: var(--primary-bg); color: var(--text-primary); font-size: 14px; }
         .container { max-width: 950px; margin: 20px auto; padding: 20px; }
-        
-        /* --- MODAL STYLES --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 1001; display: none; justify-content: center; align-items: center; }
         .modal-content { background: var(--secondary-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); }
         .modal-content h3 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
         .modal-overlay.active { display: flex; }
-
-        /* --- UI Elements --- */
         .section-box { background: var(--secondary-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+        h3 { border-bottom: 1px solid var(--button-color); padding-bottom: 10px; margin-bottom: 20px; }
+        .analytics-item { margin-bottom: 20px; }
+        .analytics-item p { font-size: 1.1em; margin-bottom: 5px; color: var(--text-secondary); }
+        .analytics-item strong { font-size: 1.8em; color: var(--green-color); }
         .item-header { display: flex; align-items: center; background-color: var(--card-bg); padding: 12px 15px; border-radius: 8px; }
         .item-header .icon { margin-right: 12px; color: var(--edit-color); font-size: 1.2em; width: 25px; text-align: center; }
         .item-header .icon.fa-layer-group { color: #9b59b6; } .item-header .icon.fa-book { color: #3498db; }
@@ -35,20 +35,16 @@
         .action-btn:hover { color: white; }
         .toggle-btn { cursor: pointer; transition: transform 0.3s; width: 20px; text-align: center; margin-right: 5px; }
         .toggle-btn.collapsed { transform: rotate(-90deg); }
-        
         .nested-container { padding-left: 20px; margin-top: 10px; border-left: 2px solid var(--border-color); }
         .collapsible-content { display: block; padding-top: 15px; }
         .collapsible-content.collapsed { display: none; }
         .content-section { padding: 15px; border-radius: 8px; background: var(--primary-bg); margin-top: 15px; }
         .content-section-header { display: flex; align-items: center; cursor: pointer; padding: 10px; background: var(--card-bg); border-radius: 8px; }
         .content-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
-
         .add-form { padding: 15px; background-color: var(--card-bg); border-radius: 8px; margin-top: 15px; }
         .add-form h6 { margin-top: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-
         input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'Poppins', sans-serif; font-size: 1em; background: var(--card-bg); color: var(--text-primary); }
         button { background: var(--button-color); color: white; font-weight: 600; cursor: pointer; border: none; }
-        #user-visits-count, #active-users-count { font-size: 1.5em; color: var(--green-color); }
     </style>
 </head>
 <body>
@@ -57,10 +53,14 @@
 
         <div class="section-box">
             <h3><i class="fas fa-chart-line"></i> Real-time Analytics</h3>
-            <p style="font-size: 1.1em; margin-bottom: 5px;">Total User Visits:</p>
-            <strong id="user-visits-count">Loading...</strong>
-            <p style="font-size: 1.1em; margin-bottom: 5px; margin-top: 15px;">Currently Active Users:</p>
-            <strong id="active-users-count">Loading...</strong>
+            <div class="analytics-item">
+                <p>Total User Visits (All Time):</p>
+                <strong id="user-visits-count">0</strong>
+            </div>
+            <div class="analytics-item">
+                <p>Currently Active Users:</p>
+                <strong id="active-users-count">0</strong>
+            </div>
         </div>
         
         <div class="section-box">
@@ -130,11 +130,10 @@
         batchesListDiv.innerHTML = '';
         const sortedBatches = Object.entries(fullData.batches || {}).sort(([,a], [,b]) => (a.order || 0) - (b.order || 0));
         
-        sortedBatches.forEach(([batchId, batch], index) => {
-            batchesListDiv.appendChild(createBatchElement(batch, `batches/${batchId}`, index, sortedBatches.length));
+        sortedBatches.forEach(([batchId, batch]) => {
+            batchesListDiv.appendChild(createBatchElement(batch, `batches/${batchId}`));
         });
         
-        // **FINAL FIX**: UI render hone ke baad, saved value ko set karo.
         const savedType = localStorage.getItem('lastSelectedContentType');
         if (savedType) {
             document.querySelectorAll('.content-type').forEach(selectElement => {
@@ -143,7 +142,7 @@
         }
     }
 
-    function createBatchElement(batch, path, index, total) {
+    function createBatchElement(batch, path) {
         const isCollapsed = !openItemsState.has(path);
         const container = document.createElement('div');
         container.className = 'section-box';
@@ -255,6 +254,7 @@
         });
     }
     
+    // --- Data Listeners ---
     onValue(ref(database, 'batches'), (snapshot) => {
         fullData.batches = snapshot.val();
         renderUI();
@@ -275,16 +275,16 @@
 
     const presenceRef = ref(database, 'presence');
     onValue(presenceRef, (snapshot) => {
-        const count = snapshot.numChildren();
+        const count = snapshot.size;
         document.getElementById('active-users-count').textContent = count;
     });
 
+    // --- Event Delegation ---
     document.body.addEventListener('click', async (e) => {
         const target = e.target;
         if (target.closest('.toggle-btn')) {
-            const toggleBtn = target.closest('.toggle-btn');
-            toggleBtn.classList.toggle('collapsed');
-            toggleBtn.closest('.item-header, .content-section-header').nextElementSibling?.classList.toggle('collapsed');
+            target.closest('.toggle-btn').classList.toggle('collapsed');
+            target.closest('.item-header, .content-section-header').nextElementSibling?.classList.toggle('collapsed');
         }
 
         const button = target.closest('button');
@@ -300,9 +300,8 @@
         } else if (button.matches('#add-batch-btn')) {
             const titleInput = document.getElementById('batch-title');
             const imageInput = document.getElementById('batch-image');
-            const order = Object.keys(fullData.batches || {}).length;
             if (titleInput.value && imageInput.value) {
-                 push(ref(database, 'batches'), { title: titleInput.value, imageUrl: imageInput.value, order });
+                 push(ref(database, 'batches'), { title: titleInput.value, imageUrl: imageInput.value, order: Object.keys(fullData.batches || {}).length });
                  titleInput.value = '';
                  imageInput.value = '';
             }
@@ -310,29 +309,25 @@
             const form = button.closest('.add-form');
             const titleInput = form.querySelector('.content-title');
             const urlInput = form.querySelector('.content-url');
-            const typeSelect = form.querySelector('.content-type');
-            
-            const newContent = {
-                title: titleInput.value,
-                url: urlInput.value,
-                type: typeSelect.value,
-            };
-            
-            if (newContent.title && newContent.url) {
-                await push(ref(database, path), newContent);
+            if (titleInput.value && urlInput.value) {
+                await push(ref(database, path), {
+                    title: titleInput.value,
+                    url: urlInput.value,
+                    type: form.querySelector('.content-type').value,
+                });
                 titleInput.value = '';
                 urlInput.value = '';
             }
         } else if (button.matches('.delete-btn')) {
-            if (confirm('Are you sure?')) remove(ref(database, path));
+            if (confirm('Are you sure you want to delete this? This action cannot be undone.')) remove(ref(database, path));
         } else if (button.matches('.edit-btn')) {
             const currentTitle = button.closest('.item-header').querySelector('.item-title').textContent;
             const newTitle = prompt('Enter new title:', currentTitle);
             if (newTitle) update(ref(database, path), { title: newTitle });
         } else if (button.matches('.edit-content-btn')) {
             const itemSnapshot = await get(ref(database, path));
-            const item = itemSnapshot.val();
-            if (item) {
+            if (itemSnapshot.exists()) {
+                const item = itemSnapshot.val();
                 document.getElementById('edit-path').value = path;
                 document.getElementById('edit-title').value = item.title;
                 document.getElementById('edit-url').value = item.url;
@@ -353,12 +348,11 @@
         } else if (button.matches('#cancel-edit-btn')) {
             document.getElementById('edit-modal').classList.remove('active');
         } else if (button.matches('#save-settings-btn')) {
-            const settings = {
+            await set(ref(database, 'settings'), {
                 logoLink: document.getElementById('logo-link').value,
                 telegramLink: document.getElementById('telegram-link').value,
                 contactLink: document.getElementById('contact-link').value
-            };
-            await set(ref(database, 'settings'), settings);
+            });
             alert('Settings Saved!');
         }
     });
